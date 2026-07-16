@@ -33,6 +33,24 @@ test('every members module has stable asset paths and waits for initial auth', (
   }
 });
 
+test('large member modules keep CSS and JavaScript outside index.html', () => {
+  for (const name of ['bitpaper', 'whiteboard', 'forms', 'yt']) {
+    const directory = path.join(modulesRoot, name);
+    const html = fs.readFileSync(path.join(directory, 'index.html'), 'utf8');
+    assert.doesNotMatch(html, /<style\b/i, `${name}: CSS remains inline`);
+    assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i, `${name}: JavaScript remains inline`);
+    assert.ok(fs.existsSync(path.join(directory, 'style.css')), `${name}: missing style.css`);
+    assert.ok(fs.existsSync(path.join(directory, 'script.js')), `${name}: missing script.js`);
+  }
+
+  for (const [name, scriptName] of [['contact', 'script.js'], ['chat', 'bootstrap.js']]) {
+    const directory = path.join(modulesRoot, name);
+    const html = fs.readFileSync(path.join(directory, 'index.html'), 'utf8');
+    assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i, `${name}: JavaScript remains inline`);
+    assert.ok(fs.existsSync(path.join(directory, scriptName)), `${name}: missing ${scriptName}`);
+  }
+});
+
 test('members home is a local Markdown dashboard rather than a remote iframe', () => {
   const html = fs.readFileSync(path.join(root, 'public', 'members', 'index.html'), 'utf8');
   const script = fs.readFileSync(path.join(root, 'public', 'members', 'dashboard.js'), 'utf8');
@@ -45,6 +63,19 @@ test('members home is a local Markdown dashboard rather than a remote iframe', (
   assert.match(markdown, /^###\s+\S/m);
   assert.match(script, /document\.createElement\('details'\)/);
   assert.match(script, /resource-accordion/);
+});
+
+test('members dashboard has a persistent accessible light and dark theme', () => {
+  const html = fs.readFileSync(path.join(root, 'public', 'members', 'index.html'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'public', 'members', 'dashboard.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(root, 'public', 'members', 'dashboard.css'), 'utf8');
+
+  assert.match(html, /id=["']theme-toggle["']/);
+  assert.match(html, /prefers-color-scheme:\s*dark/);
+  assert.match(script, /localStorage\.setItem\(THEME_STORAGE_KEY/);
+  assert.match(script, /aria-pressed/);
+  assert.match(styles, /html\[data-theme=["']dark["']\]/);
+  assert.match(styles, /color-scheme:\s*dark/);
 });
 
 test('dashboard exposes user management only through the guarded admin workflow', () => {
@@ -79,13 +110,17 @@ test('administrator UI covers invitations, deletion, Forms and versioned Markdow
   assert.doesNotMatch(script, /process\.env|api\.netlify\.com/);
 });
 
-test('dashboard runtime editor declares and initializes the Netlify Blobs dependency', () => {
+test('dashboard runtime editor initializes strong Netlify Blobs API access', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const implementation = fs.readFileSync(path.join(root, 'netlify', 'functions', 'admin-dashboard.js'), 'utf8');
 
   assert.equal(manifest.dependencies['@netlify/blobs'], '10.7.9');
   assert.match(implementation, /require\(['"]@netlify\/blobs['"]\)/);
-  assert.match(implementation, /connectLambda\(event\)/);
+  assert.match(implementation, /process\.env\.NETLIFY_API_TOKEN/);
+  assert.match(implementation, /process\.env\.SITE_ID/);
+  assert.match(implementation, /siteID:\s*config\.siteId/);
+  assert.match(implementation, /consistency:\s*'strong'/);
+  assert.doesNotMatch(implementation, /^\s*connectLambda\(event\);/m);
   assert.match(implementation, /writeResult\.modified\s*!==\s*true/);
 });
 

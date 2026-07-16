@@ -83,8 +83,15 @@
       ? `${base}/embed?start=false&loop=false&delayms=3000&rm=minimal`
       : `${base}/preview?start=false&loop=false&delayms=3000`;
   const outsideUrl = state.published ? `${base}/pub` : `${base}/view`;
-  providerTop.href = outsideUrl;
-  providerTop.hidden = false;
+  providerTop.hidden = protectedMode;
+  providerLink.hidden = protectedMode;
+  if (!protectedMode) {
+    providerTop.href = outsideUrl;
+    providerLink.href = outsideUrl;
+  } else {
+    providerTop.removeAttribute('href');
+    providerLink.removeAttribute('href');
+  }
 
   function beginLoad() {
     attempt += 1;
@@ -105,7 +112,6 @@
       if (!stage.classList.contains('is-ready')) {
         loading.hidden = true;
         slow.hidden = false;
-        providerLink.href = outsideUrl;
         retryTop.hidden = false;
       }
     }, 12000);

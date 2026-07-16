@@ -49,6 +49,7 @@
   let slowTimer = 0;
   let failTimer = 0;
   let attempt = 0;
+  let youtubeFrameObserver = null;
 
   function clearTimers() {
     window.clearTimeout(slowTimer);
@@ -108,10 +109,20 @@
     : 'Film może mieć wyłączone osadzanie albo dostawca odtwarzacza jest chwilowo niedostępny.';
   providerLink.href = outsideUrl;
   providerTop.href = outsideUrl;
-  providerTop.hidden = false;
+  providerTop.hidden = protectedMode;
+  providerLink.hidden = protectedMode;
   stage.classList.toggle('is-protected', protectedMode);
 
   if (protectedMode) {
+    const secureYouTubeFrames = () => {
+      videoHost.querySelectorAll('iframe').forEach((iframe) => {
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+        iframe.setAttribute('allow', 'autoplay; encrypted-media');
+        iframe.removeAttribute('allowfullscreen');
+      });
+    };
+    youtubeFrameObserver = new MutationObserver(secureYouTubeFrames);
+    youtubeFrameObserver.observe(videoHost, { childList: true, subtree: true });
     document.addEventListener('contextmenu', (event) => event.preventDefault(), { capture: true });
     document.addEventListener('keydown', (event) => {
       const key = String(event.key || '').toLowerCase();
@@ -231,6 +242,13 @@
           customVars: { origin: location.origin }
         }
       }, () => {
+        if (protectedMode) {
+          videoHost.querySelectorAll('iframe').forEach((iframe) => {
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+            iframe.setAttribute('allow', 'autoplay; encrypted-media');
+            iframe.removeAttribute('allowfullscreen');
+          });
+        }
         if (loadAttempt === attempt) showReady();
       });
       player.on('loadedmetadata', () => {
@@ -295,7 +313,10 @@
   document.getElementById('retry').addEventListener('click', beginLoad);
   document.getElementById('retry-error').addEventListener('click', beginLoad);
   retryTop.addEventListener('click', beginLoad);
-  window.addEventListener('pagehide', disposePlayer, { once: true });
+  window.addEventListener('pagehide', () => {
+    if (youtubeFrameObserver) youtubeFrameObserver.disconnect();
+    disposePlayer();
+  }, { once: true });
 
   beginLoad();
 })();

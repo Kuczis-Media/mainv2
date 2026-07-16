@@ -40,7 +40,7 @@ npm run dev
 
 Polecenie uruchamia `netlify dev`, dzięki czemu jednocześnie działają statyczne strony, przekierowania i funkcje. Samo otwarcie pliku `public/index.html` z dysku nie odtworzy zachowania Netlify Identity ani Functions.
 
-Dla lokalnego czatu i zakładki formularzy utwórz nieśledzony plik `.env`:
+Dla lokalnego czatu, zakładki formularzy i edytora dashboardu utwórz nieśledzony plik `.env`:
 
 ```dotenv
 GEMINI_API_KEY=klucz_z_Google_AI_Studio
@@ -54,7 +54,7 @@ Nie umieszczaj kluczy w `public`, plikach JavaScript przeglądarki, `dashboard.m
 
 1. Utwórz witrynę z tego repozytorium. Ustawienia publikacji i funkcji są już zapisane w `netlify.toml` (`public` oraz `netlify/functions`).
 2. Włącz Netlify Identity. W ustawieniach rejestracji wybierz rejestrację otwartą albo tylko na zaproszenie, zależnie od sposobu sprzedaży kursu. Jeśli wymagane jest potwierdzenie e-maila, pozostaw włączone wiadomości potwierdzające.
-3. Dodaj `GEMINI_API_KEY` oraz `NETLIFY_API_TOKEN` w zmiennych środowiskowych witryny i ustaw ich zakres na **Functions**. Token Netlify umożliwia zakładce administracyjnej odczyt i trwałe usuwanie zgłoszeń Forms; traktuj go jak sekret.
+3. Dodaj `GEMINI_API_KEY` oraz `NETLIFY_API_TOKEN` w zmiennych środowiskowych witryny i ustaw ich zakres na **Functions**. Token Netlify umożliwia zakładce administracyjnej obsługę zgłoszeń Forms oraz silnie spójny dostęp edytora dashboardu do Netlify Blobs; traktuj go jak sekret. `SITE_ID` Netlify ustawia automatycznie.
 4. Pierwszemu administratorowi przypisz ręcznie rolę `admin` w `app_metadata` w panelu Netlify Identity. Kolejnymi kontami można już zarządzać z panelu administratora w dashboardzie.
 5. Po rejestracji przypisz użytkownikowi jedną z ról dostępu opisaną niżej. Nowe konto bez roli może się uwierzytelnić, ale nie otworzy `/members/`.
 6. Udostępnij osadzane pliki Google odbiorcom, którzy mają je oglądać. Aplikacja nie omija uprawnień Dysku, Prezentacji ani Formularzy Google.
@@ -138,7 +138,7 @@ Zakładka **Formularze** pokazuje formularze przetworzone przez Netlify Forms, n
 
 ## Edycja dashboardu
 
-Wersją bazową jest `public/members/dashboard.md`. Administrator może również zapisać aktywną wersję w zakładce **Dashboard** bez wykonywania deployu. Jest ona przechowywana w Netlify Blobs, a zapis używa kontroli wersji (`etag`), aby dwóch administratorów nie nadpisało sobie zmian po cichu. Przycisk przywracania atomowo dezaktywuje override i ponownie aktywuje plik z wdrożenia.
+Wersją bazową jest `public/members/dashboard.md`. Administrator może również zapisać aktywną wersję w zakładce **Dashboard** bez wykonywania deployu. Jest ona przechowywana w Netlify Blobs, a zapis używa kontroli wersji (`etag`) i silnie spójnego dostępu przez serwerowe `NETLIFY_API_TOKEN` oraz `SITE_ID`, aby dwóch administratorów nie nadpisało sobie zmian po cichu. Sekretny token nie jest wysyłany do przeglądarki. Przycisk przywracania atomowo dezaktywuje override i ponownie aktywuje plik z wdrożenia.
 
 Panel kursanta najpierw próbuje pobrać aktywną wersję z funkcji, a gdy jej nie ma lub magazyn jest chwilowo niedostępny, bezpiecznie wraca do `dashboard.md`. Nie trzeba zmieniać `index.html`.
 
@@ -199,6 +199,10 @@ Wartość `id` może być bezpośrednim identyfikatorem. Moduły Google i YouTub
 | `/members/module/yt/` | `id` — ID albo link YouTube; własne kontrolki i maska odtwarzacza. Obsługuje też linki `youtu.be`, `watch`, `shorts`, `live` i `embed`. | `/members/module/yt/?id=CH50zuS8DD0` |
 | `/time` | Brak parametrów; pokazuje rolę i pozostały czas dostępu. | `/time` |
 
+W trybach ograniczonych (`pdf: type=1`, `slides: type=2`) odnośniki „Awaryjnie” i „Sprawdź w Google” są ukryte i nie otrzymują adresu pliku. „Ponów” tylko ponownie ładuje osadzony podgląd. Dla Slides `type=1` jest świadomie zwykłym podglądem, dlatego może udostępniać przejście do Google — do materiałów chronionych używaj `type=2`.
+
+Maski, sandbox i ukrycie linków ograniczają typowe przejścia z interfejsu, ale nie są zabezpieczeniem DRM. Plik musi być dostępny dla przeglądarki, więc zaawansowany użytkownik nadal może ustalić źródło przez narzędzia deweloperskie lub ruch sieciowy. Materiałów, których odbiorca absolutnie nie może pobrać, nie należy udostępniać klientowi w oryginalnej postaci.
+
 ### Filmy i FilmV1
 
 Najprostsze linki:
@@ -214,6 +218,34 @@ Najprostsze linki:
 - `type=3` uruchamia YouTube z pełniejszymi kontrolkami;
 - zamiast `type` pełny link może zostać rozpoznany automatycznie; dla samego ID pliku Drive trzeba podać `type=2` albo `provider=drive`;
 - strona odtwarzacza i całe otoczenie działają pod domeną ChemDisk, ale film nadal jest przesyłany przez YouTube lub Google. Video.js nie zmienia pliku Drive w bezpośredni strumień HTML5, ponieważ publiczny URL pobrania, CORS i uprawnienia Google nie są stabilnym API odtwarzania.
+
+Moduł `film` korzysta bezpośrednio z osadzenia YouTube/Google, natomiast `filmv1` używa Video.js dla YouTube i osadzenia dostawcy dla Dysku. Przykłady:
+
+```text
+/members/module/film/?id=CH50zuS8DD0&type=1
+/members/module/film/?id=ID_PLIKU_DRIVE&type=2
+/members/module/filmv1/?id=CH50zuS8DD0&type=1
+/members/module/filmv1/?id=ID_PLIKU_DRIVE&type=2
+```
+
+W `type=1` oba odtwarzacze ukrywają odnośniki awaryjne, nakładają maski na tytuł, logo i przyciski dostawcy oraz uruchamiają iframe w sandboxie bez `allow-popups` i bez nawigacji górnego okna. `type=3` jest świadomie trybem zwykłym i może udostępniać pełniejsze funkcje YouTube. `type=2` korzysta z Google Drive i wymaga poprawnego udostępnienia pliku.
+
+Ponieważ zawartość YouTube działa w zewnętrznym iframe, aplikacja nie może modyfikować jej kodu. Sandbox i maski blokują typowe kliknięcia prowadzące do YouTube w trybie ograniczonym, ale po zmianie interfejsu przez dostawcę położenie masek może wymagać aktualizacji. Nie jest to zabezpieczenie DRM.
+
+### Odtwarzacz YT
+
+Moduł `/members/module/yt/` jest osobnym odtwarzaczem YouTube z kontrolkami ChemDisk. W linku podaj 11-znakowe ID filmu albo pełny, zakodowany link YouTube:
+
+```text
+/members/module/yt/?id=CH50zuS8DD0
+/members/module/yt/?id=https%3A%2F%2Fyoutu.be%2FCH50zuS8DD0
+```
+
+Akceptowane są linki `youtu.be`, `youtube.com/watch`, `shorts`, `live` i `embed`. Po otwarciu parametr `id` jest przenoszony do `sessionStorage` i usuwany z paska adresu. Odświeżenie w tej samej karcie zachowuje film; otwarcie czystego adresu w nowej karcie wymaga ponownego przekazania ID.
+
+Odtwarzacz ma własne przyciski odtwarzania, restartu, wyciszania i pełnego ekranu, suwaki postępu oraz głośności i obsługę dotyku. Na telefonie podpisy przycisków są zastępowane ikonami, a film pozostaje osadzony w stronie dzięki `playsinline=1`. Ostatnie szybkie kliknięcie wyciszenia zawsze wyznacza stan docelowy, niezależnie od opóźnienia API YouTube.
+
+Film musi pozwalać na osadzanie. Własne kontrolki i maski ograniczają przypadkowe przejście do YouTube, ale nie są zabezpieczeniem DRM.
 
 ### Prompty czatu
 

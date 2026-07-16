@@ -1,3 +1,11 @@
+.film-guard-title {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: clamp(54px, 9vh, 78px);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.78) 58%, transparent 100%);
+}
+
 .film-guard-share {
   top: 10px;
   right: 10px;
@@ -17,6 +25,7 @@
 }
 
 @media (max-width: 620px) {
+  .film-guard-title { height: 54px; }
   .film-guard-share { width: 70px; height: 34px; }
   .film-guard-brand { right: 5px; bottom: 48px; width: 68px; height: 27px; }
 }

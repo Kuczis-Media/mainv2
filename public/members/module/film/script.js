@@ -82,7 +82,8 @@
     ? `https://drive.google.com/file/d/${encodedId}/view`
     : `https://www.youtube.com/watch?v=${encodedId}`;
   providerTop.href = outsideUrl;
-  providerTop.hidden = false;
+  providerTop.hidden = protectedMode;
+  providerLink.hidden = protectedMode;
 
   providerCopy.textContent = isDrive ? 'Google Drive' : 'YouTube';
   modeBadge.textContent = isDrive ? 'Wideo z Dysku' : protectedMode ? 'Tryb ograniczony' : 'Pełny odtwarzacz';
@@ -96,6 +97,7 @@
 
   if (protectedMode) {
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+    frame.setAttribute('allow', 'autoplay; encrypted-media');
     frame.removeAttribute('allowfullscreen');
     document.addEventListener('contextmenu', (event) => event.preventDefault(), { capture: true });
     document.addEventListener('keydown', (event) => {

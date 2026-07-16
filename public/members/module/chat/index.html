@@ -13,31 +13,8 @@
     <title>Asystent AI — ChemDisk</title>
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script src="/assets/js/auth.js"></script>
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']]
-        },
-        options: {
-          renderActions: { addMenu: [] }
-        }
-      };
-    </script>
+    <script src="bootstrap.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
-    <script>
-      (function loadStoredTheme() {
-        try {
-          var stored = localStorage.getItem('chem.theme');
-          if (!stored && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            stored = 'dark';
-          }
-          document.documentElement.dataset.theme = stored === 'dark' ? 'dark' : 'light';
-        } catch (err) {
-          document.documentElement.dataset.theme = 'light';
-        }
-      })();
-    </script>
 
     <link
       rel="stylesheet"

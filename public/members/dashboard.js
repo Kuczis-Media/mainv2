@@ -6,6 +6,7 @@
   const ADMIN_USERS_URL = '/.netlify/functions/admin-users';
   const ADMIN_FORMS_URL = '/.netlify/functions/admin-forms';
   const ADMIN_DASHBOARD_URL = '/.netlify/functions/admin-dashboard';
+  const THEME_STORAGE_KEY = 'chem.theme';
   const ACCESS_ROLE_OPTIONS = Object.freeze([
     { value: '', label: 'Brak dostępu' },
     { value: 'active', label: 'Stały dostęp' },
@@ -88,6 +89,7 @@
     emptySearch: document.getElementById('empty-search'),
     clearSearch: document.getElementById('clear-search'),
     menuButton: document.getElementById('menu-button'),
+    themeToggle: document.getElementById('theme-toggle'),
     sidebarBackdrop: document.getElementById('sidebar-backdrop'),
     logoutButton: document.getElementById('logout-button'),
     profileDialog: document.getElementById('profile-dialog'),
@@ -148,6 +150,45 @@
   let adminDashboardEtag = null;
   let adminDashboardSourceKind = 'static';
   let adminDashboardBaseline = '';
+
+  function preferredTheme() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  }
+
+  function applyTheme(theme, persist) {
+    const next = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    const dark = next === 'dark';
+    const label = dark ? 'Włącz jasny motyw' : 'Włącz ciemny motyw';
+    const themeColor = document.getElementById('theme-color');
+    if (themeColor) themeColor.setAttribute('content', dark ? '#0d121a' : '#f7f9fc');
+    if (elements.themeToggle) {
+      elements.themeToggle.setAttribute('aria-label', label);
+      elements.themeToggle.setAttribute('aria-pressed', String(dark));
+      elements.themeToggle.title = label;
+    }
+    if (persist) {
+      try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch (_) {}
+    }
+  }
+
+  function initializeTheme() {
+    let theme = document.documentElement.dataset.theme;
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'dark' || saved === 'light') theme = saved;
+      else theme = preferredTheme();
+    } catch (_) {
+      theme = preferredTheme();
+    }
+    applyTheme(theme, false);
+  }
+
+  function toggleTheme() {
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+  }
 
   function normalizeText(value) {
     return String(value || '')
@@ -567,14 +608,15 @@
         });
         if (response.ok) {
           const payload = await response.json();
+          if (payload && payload.source === 'static') return fetchStaticDashboard();
           if (payload && typeof payload.content === 'string') return payload.content;
           throw new Error('Serwer zwrócił nieprawidłową treść dashboardu.');
         }
         if (response.status === 401 || response.status === 403) {
           throw new Error('Sesja wygasła albo dostęp do kursu został zakończony.');
         }
-        // Brak wersji zapisanej w magazynie (404) oraz chwilowa niedostępność
-        // Functions/Blobs nie blokują statycznej wersji awaryjnej.
+        // Starsza odpowiedź 404 oraz chwilowa niedostępność Functions/Blobs nie
+        // blokują statycznej wersji awaryjnej.
       } catch (error) {
         if (error && /Sesja wygasła|dostęp do kursu/.test(error.message || '')) throw error;
       } finally {
@@ -1669,10 +1711,16 @@
         adminDashboardSourceKind = 'static';
       } else {
         const payload = await readAdminResponse(response);
-        if (!payload || typeof payload.content !== 'string') throw new Error('Serwer zwrócił nieprawidłową treść dashboardu.');
-        content = payload.content;
-        adminDashboardEtag = typeof payload.etag === 'string' ? payload.etag : null;
-        adminDashboardSourceKind = payload.source === 'blob' ? 'blob' : 'static';
+        if (payload && payload.source === 'static') {
+          content = await fetchStaticDashboard();
+          adminDashboardEtag = null;
+          adminDashboardSourceKind = 'static';
+        } else {
+          if (!payload || typeof payload.content !== 'string') throw new Error('Serwer zwrócił nieprawidłową treść dashboardu.');
+          content = payload.content;
+          adminDashboardEtag = typeof payload.etag === 'string' ? payload.etag : null;
+          adminDashboardSourceKind = 'blob';
+        }
       }
       elements.adminDashboardSource.value = content;
       adminDashboardBaseline = content;
@@ -1868,6 +1916,7 @@
   }
 
   function bindEvents() {
+    if (elements.themeToggle) elements.themeToggle.addEventListener('click', toggleTheme);
     elements.menuButton.addEventListener('click', () => {
       if (elements.body.classList.contains('menu-open')) closeMenu();
       else openMenu();
@@ -1950,6 +1999,7 @@
   }
 
   async function init() {
+    initializeTheme();
     bindEvents();
     setupIdentity();
     const auth = window.ChemAuth;

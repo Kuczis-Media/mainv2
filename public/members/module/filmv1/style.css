@@ -1,3 +1,11 @@
+.filmv1-guard-title {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: clamp(54px, 9vh, 78px);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.76) 58%, transparent 100%);
+}
+
 .filmv1-stage .video-host {
   position: absolute;
   inset: 0;
@@ -24,6 +32,19 @@
 .filmv1-stage .vjs-big-play-button { border: 0; border-radius: 999px; background: rgba(37, 99, 235, 0.92); }
 .filmv1-stage .vjs-big-play-button:hover { background: #1d4ed8; }
 
+.filmv1-stage .vjs-control {
+  min-width: 3.2em;
+  border-radius: 8px;
+}
+
+.filmv1-stage .vjs-control:hover,
+.filmv1-stage .vjs-control:focus-visible { background: rgba(37, 99, 235, 0.34); }
+
+.filmv1-stage .vjs-progress-control .vjs-progress-holder { height: .45em; border-radius: 999px; }
+.filmv1-stage .vjs-play-progress,
+.filmv1-stage .vjs-volume-level { background: linear-gradient(90deg, #60a5fa, #22d3ee); }
+.filmv1-stage .vjs-play-progress::before { color: #e0f2fe; }
+
 .filmv1-guard-share {
   top: 10px;
   right: 10px;
@@ -43,6 +64,10 @@
 }
 
 @media (max-width: 620px) {
+  .filmv1-guard-title { height: 54px; }
+  .filmv1-stage .vjs-control-bar { min-height: 3.8em; padding-bottom: env(safe-area-inset-bottom); }
+  .filmv1-stage .vjs-control { min-width: 3em; }
+  .filmv1-stage .vjs-remaining-time { display: none; }
   .filmv1-guard-share { width: 70px; height: 34px; }
   .filmv1-guard-brand { right: 5px; bottom: 50px; width: 68px; height: 27px; }
 }

@@ -5,8 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="x-members" content="1" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#f7f9fc" />
+  <meta name="theme-color" id="theme-color" content="#f7f9fc" />
   <meta http-equiv="Cache-Control" content="no-store" />
+
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('chem.theme');
+        var dark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.getElementById('theme-color').setAttribute('content', dark ? '#0d121a' : '#f7f9fc');
+      } catch (_) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    })();
+  </script>
 
   <title>Panel kursanta — ChemDisk</title>
 
@@ -96,6 +109,16 @@
           <input id="resource-search" type="search" placeholder="Szukaj materiału lub narzędzia…" aria-label="Szukaj materiału lub narzędzia" autocomplete="off" />
           <kbd aria-hidden="true">/</kbd>
         </label>
+
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Włącz ciemny motyw" aria-pressed="false" title="Włącz ciemny motyw">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20 15.2A8.4 8.4 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+        </button>
 
         <button class="top-account" id="top-profile-button" type="button" aria-haspopup="dialog">
           <span class="avatar avatar-small" data-user-initials aria-hidden="true">U</span>

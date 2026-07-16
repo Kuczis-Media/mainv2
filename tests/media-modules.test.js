@@ -87,3 +87,66 @@ test('filmv1 uses Video.js for YouTube and a Drive embed fallback', () => {
   assert.match(script, /drive\.google\.com\/file\/d\/\$\{encodedId\}\/preview/);
   assert.match(script, /Google Drive · podgląd dostawcy/);
 });
+
+test('shared media viewers expose a persistent collapsible mobile toolbar', () => {
+  const chrome = fs.readFileSync(path.join(moduleRoot, 'media-viewer.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(moduleRoot, 'media-viewer.css'), 'utf8');
+
+  for (const name of ['pdf', 'slides', 'film', 'filmv1']) {
+    const html = fs.readFileSync(path.join(moduleRoot, name, 'index.html'), 'utf8');
+    assert.match(html, /src=["']\.\.\/media-viewer\.js["']/, `${name}: missing collapsible toolbar script`);
+  }
+  assert.match(chrome, /viewer-bar-collapsed/);
+  assert.match(chrome, /aria-expanded/);
+  assert.match(styles, /100dvh/);
+  assert.match(styles, /viewer-bar\.is-collapsed/);
+});
+
+test('custom YT player has mobile controls, filled ranges and deterministic mute state', () => {
+  const html = fs.readFileSync(path.join(moduleRoot, 'yt', 'index.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(moduleRoot, 'yt', 'style.css'), 'utf8');
+  const script = fs.readFileSync(path.join(moduleRoot, 'yt', 'script.js'), 'utf8');
+
+  assert.match(styles, /--range-progress/);
+  assert.match(styles, /100dvh/);
+  assert.match(html, /aria-pressed=["']false["']/);
+  assert.match(script, /let desiredMuted = false/);
+  assert.match(script, /requestMuteState\(!desiredMuted\)/);
+  assert.match(script, /verifyMuteState/);
+  assert.doesNotMatch(script, /const muted = player\.isMuted\(\);\s*if \(muted\)/);
+});
+
+test('protected Film and FilmV1 suppress provider links and sandbox YouTube frames without popups', () => {
+  for (const name of ['film', 'filmv1']) {
+    const html = fs.readFileSync(path.join(moduleRoot, name, 'index.html'), 'utf8');
+    const script = fs.readFileSync(path.join(moduleRoot, name, 'script.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(moduleRoot, name, 'style.css'), 'utf8');
+
+    assert.match(html, new RegExp(`${name}-guard-title`));
+    assert.match(script, /providerTop\.hidden\s*=\s*protectedMode/);
+    assert.match(script, /providerLink\.hidden\s*=\s*protectedMode/);
+    assert.match(script, /sandbox.*allow-scripts allow-same-origin allow-presentation/);
+    assert.doesNotMatch(script, /allow-popups/);
+    assert.match(styles, new RegExp(`\\.${name}-guard-title`));
+  }
+});
+
+test('protected PDF and Slides suppress every direct Google fallback link', () => {
+  const cases = [
+    { name: 'pdf', protectedType: /const protectedMode = state\.type === '1'/ },
+    { name: 'slides', protectedType: /const protectedMode = state\.type === '2'/ }
+  ];
+
+  for (const { name, protectedType } of cases) {
+    const script = fs.readFileSync(path.join(moduleRoot, name, 'script.js'), 'utf8');
+
+    assert.match(script, protectedType, `${name}: unexpected protected type mapping`);
+    assert.match(script, /providerTop\.hidden\s*=\s*protectedMode/);
+    assert.match(script, /providerLink\.hidden\s*=\s*protectedMode/);
+    assert.match(script, /if \(!protectedMode\)\s*\{[\s\S]*providerTop\.href\s*=\s*outsideUrl;[\s\S]*providerLink\.href\s*=\s*outsideUrl;/);
+    assert.match(script, /providerTop\.removeAttribute\('href'\)/);
+    assert.match(script, /providerLink\.removeAttribute\('href'\)/);
+    assert.match(script, /sandbox.*allow-scripts allow-same-origin allow-forms allow-presentation/);
+    assert.doesNotMatch(script, /allow-popups|allow-top-navigation/);
+  }
+});

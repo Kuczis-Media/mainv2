@@ -14,6 +14,7 @@ const STORE_KEY = 'dashboard.md';
 const FALLBACK_URL = '/members/dashboard.md';
 const MAX_MARKDOWN_BYTES = 256 * 1024;
 const MAX_BODY_BYTES = MAX_MARKDOWN_BYTES + 16 * 1024;
+const OPAQUE_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 let injectedStoreFactory = null;
 
 exports.handler = async (event = {}, context = {}) => {
@@ -47,7 +48,7 @@ exports.handler = async (event = {}, context = {}) => {
 
   let store;
   try {
-    store = getDashboardStore(event);
+    store = getDashboardStore();
   } catch (error) {
     console.error('Dashboard Blob store initialization failed', safeErrorName(error));
     return storageUnavailable();
@@ -174,16 +175,37 @@ async function deleteOverride(event, store, auth) {
   });
 }
 
-function getDashboardStore(event) {
+function getDashboardStore() {
   if (injectedStoreFactory) return injectedStoreFactory();
-  // Lazy loading keeps unit tests independent from the Netlify runtime. At
-  // deploy time the package is bundled and site credentials are injected
-  // automatically by Netlify Functions.
-  const { connectLambda, getStore } = require('@netlify/blobs');
-  // This function uses Netlify's legacy Lambda-compatible `(event, context)`
-  // signature, so the Blobs runtime context must be connected explicitly.
-  connectLambda(event);
-  return getStore({ name: STORE_NAME, consistency: 'strong' });
+  const config = dashboardStoreConfig();
+  if (!config) throw new Error('Dashboard Blob store is not configured');
+
+  // Lambda compatibility exposes only the cached Blobs endpoint, which cannot
+  // serve strong reads. Explicit server-only site credentials make the SDK use
+  // Netlify's signed API and preserve reliable etag/read-after-write semantics.
+  const { getStore } = require('@netlify/blobs');
+  return getStore({
+    name: STORE_NAME,
+    siteID: config.siteId,
+    token: config.token,
+    consistency: 'strong'
+  });
+}
+
+function dashboardStoreConfig() {
+  const token = typeof process.env.NETLIFY_API_TOKEN === 'string'
+    ? process.env.NETLIFY_API_TOKEN.trim()
+    : '';
+  const siteId = typeof process.env.SITE_ID === 'string' ? process.env.SITE_ID.trim() : '';
+  if (
+    token.length < 16 ||
+    token.length > 4_096 ||
+    /[\s\u0000-\u001f\u007f]/.test(token) ||
+    !OPAQUE_ID_PATTERN.test(siteId)
+  ) {
+    return null;
+  }
+  return { token, siteId };
 }
 
 function validateWrite(body) {
@@ -256,10 +278,9 @@ function dashboardConflict(current) {
 
 function noOverride() {
   return json({
-    error: 'DASHBOARD_OVERRIDE_NOT_SET',
     source: 'static',
     fallbackUrl: FALLBACK_URL
-  }, 404);
+  });
 }
 
 function storageUnavailable() {
@@ -288,6 +309,7 @@ function safeErrorName(error) {
 exports._test = {
   FALLBACK_URL,
   MAX_MARKDOWN_BYTES,
+  dashboardStoreConfig,
   etagMatchesExpected,
   isTombstone,
   setStoreFactory(factory) {

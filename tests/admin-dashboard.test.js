@@ -63,6 +63,23 @@ function installStore(t, storeOrFactory) {
   t.after(() => adminDashboard._test.setStoreFactory(null));
 }
 
+function withDashboardEnvironment(values, callback) {
+  const originalToken = process.env.NETLIFY_API_TOKEN;
+  const originalSiteId = process.env.SITE_ID;
+  if (values.token == null) delete process.env.NETLIFY_API_TOKEN;
+  else process.env.NETLIFY_API_TOKEN = values.token;
+  if (values.siteId == null) delete process.env.SITE_ID;
+  else process.env.SITE_ID = values.siteId;
+  try {
+    return callback();
+  } finally {
+    if (originalToken === undefined) delete process.env.NETLIFY_API_TOKEN;
+    else process.env.NETLIFY_API_TOKEN = originalToken;
+    if (originalSiteId === undefined) delete process.env.SITE_ID;
+    else process.env.SITE_ID = originalSiteId;
+  }
+}
+
 class MemoryStore {
   constructor(entry = null) {
     this.entry = entry && {
@@ -117,6 +134,31 @@ class MemoryStore {
     this.entry = null;
   }
 }
+
+test('dashboard Blob configuration uses server-side Netlify credentials', () => {
+  withDashboardEnvironment({
+    token: 'netlify-personal-token-for-tests',
+    siteId: '11111111-2222-4333-8444-555555555555'
+  }, () => {
+    assert.deepEqual(adminDashboard._test.dashboardStoreConfig(), {
+      token: 'netlify-personal-token-for-tests',
+      siteId: '11111111-2222-4333-8444-555555555555'
+    });
+  });
+});
+
+test('dashboard Blob configuration rejects missing or malformed credentials', () => {
+  for (const values of [
+    {},
+    { token: 'short', siteId: 'valid-site-id' },
+    { token: 'netlify-personal-token-for-tests', siteId: 'bad/site/id' },
+    { token: 'netlify token with spaces', siteId: 'valid-site-id' }
+  ]) {
+    withDashboardEnvironment(values, () => {
+      assert.equal(adminDashboard._test.dashboardStoreConfig(), null);
+    });
+  }
+});
 
 test('GET dashboard override requires canonical course access, not stale token claims', async (t) => {
   const store = new MemoryStore({ data: '# Secret', etag: 'etag-secret' });
@@ -192,9 +234,8 @@ test('GET returns an explicit static fallback when no runtime override exists', 
   installCanonicalFetch(t, canonicalUser(['active']));
 
   const response = await adminDashboard.handler(eventFor(), contextFor());
-  assert.equal(response.statusCode, 404);
+  assert.equal(response.statusCode, 200);
   assert.deepEqual(JSON.parse(response.body), {
-    error: 'DASHBOARD_OVERRIDE_NOT_SET',
     source: 'static',
     fallbackUrl: '/members/dashboard.md'
   });
@@ -210,8 +251,8 @@ test('GET treats an atomic restore tombstone as the static fallback', async (t) 
   installCanonicalFetch(t, canonicalUser(['active']));
 
   const response = await adminDashboard.handler(eventFor(), contextFor());
-  assert.equal(response.statusCode, 404);
-  assert.equal(JSON.parse(response.body).error, 'DASHBOARD_OVERRIDE_NOT_SET');
+  assert.equal(response.statusCode, 200);
+  assert.equal(JSON.parse(response.body).source, 'static');
 });
 
 test('GET treats malformed or oversized Blob records as invalid and preserves fallback', async (t) => {
@@ -445,7 +486,7 @@ test('DELETE atomically tombstones an override only with its current ETag and ex
   assert.equal(store.entry.metadata.updatedBy, USER_ID);
 
   const fallback = await adminDashboard.handler(eventFor(), contextFor());
-  assert.equal(fallback.statusCode, 404);
+  assert.equal(fallback.statusCode, 200);
   assert.equal(JSON.parse(fallback.body).source, 'static');
 
   const alreadyAbsent = await adminDashboard.handler(eventFor({

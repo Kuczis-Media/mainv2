@@ -19,6 +19,24 @@
   font-synthesis: none;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8edf5;
+  --muted: #a5b0c0;
+  --subtle: #8490a3;
+  --line: #2a3545;
+  --surface: #151c26;
+  --surface-soft: #0d121a;
+  --navy: #e8edf5;
+  --primary: #70cfbc;
+  --primary-hover: #8cddcd;
+  --primary-soft: #173c36;
+  --accent: #f0b65f;
+  --danger: #f18a94;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 22px 60px rgba(0, 0, 0, 0.48);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -472,6 +490,246 @@ a {
 
 .top-account:hover {
   background: #edf1f6;
+}
+
+.theme-toggle {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.theme-toggle:hover {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--line));
+  transform: translateY(-1px);
+}
+
+.theme-icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.theme-icon-sun,
+html[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+html[data-theme="dark"] .theme-icon-sun {
+  display: block;
+}
+
+html[data-theme="dark"] .topbar {
+  background: rgba(13, 18, 26, 0.9);
+  border-bottom-color: rgba(42, 53, 69, 0.9);
+}
+
+html[data-theme="dark"] .menu-button span {
+  background: var(--ink);
+}
+
+html[data-theme="dark"] .search-box kbd {
+  color: var(--muted);
+  background: #202936;
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .search-box input::placeholder {
+  color: #778397;
+}
+
+html[data-theme="dark"] .top-account:hover,
+html[data-theme="dark"] .dialog-close {
+  background: #202936;
+}
+
+html[data-theme="dark"] .dashboard-message {
+  color: #f1d499;
+  background: #302713;
+  border-color: #5a4824;
+}
+
+html[data-theme="dark"] .dashboard-message.is-error {
+  color: #ffb7bd;
+  background: #351a20;
+  border-color: #63303a;
+}
+
+html[data-theme="dark"] .section-heading h2,
+html[data-theme="dark"] .accordion-copy strong,
+html[data-theme="dark"] .resource-card h3,
+html[data-theme="dark"] .empty-search h2,
+html[data-theme="dark"] .admin-create-card summary strong,
+html[data-theme="dark"] .admin-user-heading h3,
+html[data-theme="dark"] .admin-empty strong,
+html[data-theme="dark"] .admin-submission-heading h3,
+html[data-theme="dark"] .admin-dashboard-preview h3,
+html[data-theme="dark"] .profile-heading h2,
+html[data-theme="dark"] .field-label,
+html[data-theme="dark"] .admin-roles legend,
+html[data-theme="dark"] .admin-toggle-copy strong {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .resource-accordion {
+  background: rgba(21, 28, 38, 0.86);
+}
+
+html[data-theme="dark"] .resource-accordion > summary,
+html[data-theme="dark"] .resource-accordion > summary:hover {
+  background: linear-gradient(135deg, #151c26, #18242b);
+}
+
+html[data-theme="dark"] .accordion-body {
+  border-top-color: var(--line);
+}
+
+html[data-theme="dark"] .resource-card:hover,
+html[data-theme="dark"] .resource-card:focus-within {
+  border-color: #43536a;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .resource-card[data-kind="video"] {
+  --icon-color: #ff9ba3;
+  --icon-background: #402127;
+}
+
+html[data-theme="dark"] .resource-card[data-kind="document"] {
+  --icon-color: #9ebbea;
+  --icon-background: #202f48;
+}
+
+html[data-theme="dark"] .resource-card[data-kind="exercise"] {
+  --icon-color: #c6a6e8;
+  --icon-background: #332642;
+}
+
+html[data-theme="dark"] .resource-card[data-kind="calculator"] {
+  --icon-color: #efbd72;
+  --icon-background: #3c301d;
+}
+
+html[data-theme="dark"] .resource-card[data-kind="contact"] {
+  --icon-color: #8fc6da;
+  --icon-background: #1d3540;
+}
+
+html[data-theme="dark"] .section-notice,
+html[data-theme="dark"] .admin-guidance,
+html[data-theme="dark"] .admin-timed-status,
+html[data-theme="dark"] .profile-access {
+  color: #b5d7d0;
+  background: #142a29;
+  border-color: #28443f;
+}
+
+html[data-theme="dark"] .admin-guidance strong {
+  color: #d0e9e4;
+}
+
+html[data-theme="dark"] .admin-guidance code,
+html[data-theme="dark"] .admin-guidance > span {
+  color: var(--primary);
+  background: #1b3834;
+}
+
+html[data-theme="dark"] .admin-guidance-warning {
+  color: #e3c78e;
+  background: #302713;
+  border-color: #5a4824;
+}
+
+html[data-theme="dark"] .admin-guidance-warning strong,
+html[data-theme="dark"] .admin-guidance-warning > span {
+  color: #f0d49c;
+}
+
+html[data-theme="dark"] .empty-search > span,
+html[data-theme="dark"] .admin-empty > span,
+html[data-theme="dark"] .admin-editor-help span,
+html[data-theme="dark"] .button-secondary {
+  background: #202936;
+}
+
+html[data-theme="dark"] .loading-line,
+html[data-theme="dark"] .loading-card {
+  background: linear-gradient(90deg, #1a222e 20%, #263140 50%, #1a222e 80%);
+  background-size: 220% 100%;
+}
+
+html[data-theme="dark"] .admin-tabs {
+  background: #111923;
+}
+
+html[data-theme="dark"] .admin-tab {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .admin-tab:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .admin-tab.is-active {
+  color: var(--primary);
+  background: #202936;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="dark"] .admin-search-field,
+html[data-theme="dark"] .admin-toggle,
+html[data-theme="dark"] .admin-submission-field,
+html[data-theme="dark"] .admin-preview-section {
+  background: #111923;
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .admin-toggle-mark,
+html[data-theme="dark"] .text-field,
+html[data-theme="dark"] .admin-dashboard-source,
+html[data-theme="dark"] .admin-dashboard-preview {
+  color: var(--ink);
+  background: #111923;
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .admin-submission-field dt,
+html[data-theme="dark"] .admin-editor-help span,
+html[data-theme="dark"] .admin-preview-section,
+html[data-theme="dark"] .admin-submission-field dd {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .admin-preview-section strong,
+html[data-theme="dark"] .admin-editor-help code {
+  color: var(--primary);
+}
+
+html[data-theme="dark"] .admin-delete-button,
+html[data-theme="dark"] .button-danger-soft {
+  color: #ff9fa8;
+  background: #3a1f25;
+  border-color: #63303a;
+}
+
+html[data-theme="dark"] .admin-timed-status.is-expired {
+  color: #ffb4bb;
+  background: #351a20;
+  border-color: #63303a;
 }
 
 .avatar-small {

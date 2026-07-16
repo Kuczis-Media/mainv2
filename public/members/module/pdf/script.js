@@ -60,8 +60,16 @@
   const previewUrl = `https://drive.google.com/file/d/${encodedId}/preview`;
   const outsideUrl = `https://drive.google.com/file/d/${encodedId}/view`;
   const downloadUrl = `https://drive.google.com/uc?export=download&id=${encodedId}`;
-  providerTop.href = outsideUrl;
-  providerTop.hidden = false;
+  const protectedMode = state.type === '1';
+  providerTop.hidden = protectedMode;
+  providerLink.hidden = protectedMode;
+  if (!protectedMode) {
+    providerTop.href = outsideUrl;
+    providerLink.href = outsideUrl;
+  } else {
+    providerTop.removeAttribute('href');
+    providerLink.removeAttribute('href');
+  }
 
   if (state.type === '2') {
     modeBadge.textContent = 'Pobieranie';
@@ -73,7 +81,6 @@
     return;
   }
 
-  const protectedMode = state.type === '1';
   modeBadge.textContent = protectedMode ? 'Ograniczone akcje' : 'Zwykły podgląd';
   stage.classList.toggle('is-protected', protectedMode);
   if (protectedMode) {
@@ -104,7 +111,6 @@
       if (!stage.classList.contains('is-ready')) {
         loading.hidden = true;
         slow.hidden = false;
-        providerLink.href = outsideUrl;
         retryTop.hidden = false;
       }
     }, 12000);
