@@ -189,6 +189,7 @@ Wartość `id` może być bezpośrednim identyfikatorem. Moduły Google i YouTub
 | `/members/module/whiteboard/` | Brak parametrów; biała tablica. | `/members/module/whiteboard/` |
 | `/members/module/kalkulator/` | Brak parametrów; kalkulator naukowy. | `/members/module/kalkulator/` |
 | `/members/module/classic/` | Brak parametrów; kalkulator klasyczny. | `/members/module/classic/` |
+| `/members/module/lesson/` | `file` — plik `.md` z folderu modułu; prezentacja krokowa z opcjonalnymi zadaniami. | `/members/module/lesson/?file=przyklad.md` |
 | `/members/module/chat/` | `prompt=nazwa.json` albo `plik=nazwa.txt&punkt=N`; prompt jest wybierany po stronie funkcji. | `/members/module/chat/?plik=prompty-przyklad.txt&punkt=1` |
 | `/members/module/forms/` | `id` — ID albo zakodowany link Google Forms. | `/members/module/forms/?id=ID_FORMULARZA` |
 | `/members/module/contact/` | `internal` — stała informacja dołączana do zgłoszenia, maks. 240 znaków. | `/members/module/contact/?internal=Pytanie%20o%20dzia%C5%82%201` |
@@ -202,6 +203,103 @@ Wartość `id` może być bezpośrednim identyfikatorem. Moduły Google i YouTub
 W trybach ograniczonych (`pdf: type=1`, `slides: type=2`) odnośniki „Awaryjnie” i „Sprawdź w Google” są ukryte i nie otrzymują adresu pliku. „Ponów” tylko ponownie ładuje osadzony podgląd. Dla Slides `type=1` jest świadomie zwykłym podglądem, dlatego może udostępniać przejście do Google — do materiałów chronionych używaj `type=2`.
 
 Maski, sandbox i ukrycie linków ograniczają typowe przejścia z interfejsu, ale nie są zabezpieczeniem DRM. Plik musi być dostępny dla przeglądarki, więc zaawansowany użytkownik nadal może ustalić źródło przez narzędzia deweloperskie lub ruch sieciowy. Materiałów, których odbiorca absolutnie nie może pobrać, nie należy udostępniać klientowi w oryginalnej postaci.
+
+### Interaktywne lekcje z Markdown
+
+Moduł `/members/module/lesson/` zamienia plik Markdown w prezentację typu wizard. Pliki lekcji umieszczaj bezpośrednio w katalogu:
+
+```text
+public/members/module/lesson/
+├── index.html
+├── lesson-parser.js
+├── script.js
+├── style.css
+├── przyklad.md
+└── moja-lekcja.md
+```
+
+Lekcję otwiera parametr `file`:
+
+```text
+/members/module/lesson/?file=moja-lekcja.md
+```
+
+Do dashboardu można dodać ją jak każdy inny materiał:
+
+```md
+- [Izotopy węgla](/members/module/lesson/?file=przyklad.md) — Lekcja interaktywna z krótkim zadaniem.
+```
+
+Nazwa z parametru może zawierać litery ASCII, cyfry, kropki, myślniki i podkreślenia, musi kończyć się `.md` i nie może zawierać ścieżki do innego katalogu. Dzięki temu link nie może odczytać pliku spoza folderu modułu. Plik Markdown i sam moduł są objęte ochroną `/members/*`.
+
+Każda linia zawierająca wyłącznie `---` kończy slajd i zaczyna następny:
+
+```md
+# Tytuł lekcji
+
+Wprowadzenie do tematu.
+
+---
+
+## Drugi krok
+
+- Pierwsza informacja
+- Druga informacja
+
+> Ważna uwaga dla kursanta.
+```
+
+Parser obsługuje nagłówki `#`, `##`, `###`, akapity, listy numerowane i punktowane, cytaty `>`, pogrubienie `**tekst**`, kursywę `*tekst*`, kod, bezpieczne linki oraz obrazy. Obraz można trzymać w podfolderze modułu i wstawić np. jako `![Opis](obrazy/schemat.png)`. Surowy HTML jest wyświetlany jako tekst i nie jest wykonywany.
+
+Dodatkowo zapis `^13^C` tworzy indeks górny (¹³C), a `H~2~O` — indeks dolny. Jest to wygodne przy zapisie izotopów i wzorów chemicznych.
+
+#### Zadanie z polem odpowiedzi
+
+Na slajdzie może wystąpić jeden blok `:::task` (działa również polska nazwa `:::zadanie`). Slajd z zadaniem nie odblokuje przycisku **Dalej**, dopóki kursant nie poda poprawnej odpowiedzi.
+
+```md
+## Zadanie
+
+Ile neutronów znajduje się w izotopie ^13^C?
+
+:::task
+type: number
+label: Liczba neutronów
+answer: 7
+placeholder: Wpisz liczbę
+hint: Odejmij Z = 6 od A = 13.
+success: Dokładnie — 13 − 6 = 7 neutronów.
+:::
+```
+
+Pola bloku zadania:
+
+| Pole | Wymagane | Znaczenie |
+| --- | --- | --- |
+| `answer` | tak | Poprawna odpowiedź. Kilka wariantów rozdziel znakiem `|`, np. `atom \| ATOM`. |
+| `type` | nie | `text` (domyślnie), `number` albo `choice`. |
+| `label` | nie | Podpis pola lub polecenie nad odpowiedziami. |
+| `placeholder` | nie | Przykład wyświetlany w pustym polu. |
+| `hint` | nie | Podpowiedź pokazywana po błędnej próbie. |
+| `success` | nie | Komunikat po poprawnej odpowiedzi. |
+| `options` | dla `choice` | Co najmniej dwie opcje rozdzielone `|`. Jedna musi odpowiadać wartości `answer`. |
+| `case_sensitive` | nie | `true`/`tak`, jeśli wielkość liter ma mieć znaczenie. Domyślnie tekst jest sprawdzany bez rozróżniania wielkości liter. |
+
+Można również używać polskich nazw pól bez znaków diakrytycznych lub z nimi: `typ`, `odpowiedź`, `etykieta`, `przykład`, `podpowiedź`, `sukces`, `opcje`, `wielkość liter`.
+
+Przykład pytania wyboru:
+
+```md
+:::task
+type: choice
+label: Wybierz liczbę neutronów w węglu-13
+options: 6 | 7 | 13
+answer: 7
+hint: Liczba neutronów to A − Z.
+:::
+```
+
+Postęp, rozwiązane zadania i ukończenie są zachowywane w `sessionStorage`, czyli przy odświeżeniu w tej samej karcie. Przycisk **Powtórz lekcję** czyści ten postęp. Odpowiedzi znajdują się w statycznym pliku Markdown, więc ten moduł służy do nauki i samosprawdzenia, a nie do tajnych lub punktowanych egzaminów.
 
 ### Filmy i FilmV1
 

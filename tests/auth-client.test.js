@@ -68,12 +68,31 @@ test('ChemAuth exposes the dashboard profile and session contract', () => {
 
   assert.equal(typeof auth.getUser, 'function');
   assert.equal(typeof auth.getProfile, 'function');
+  assert.equal(typeof auth.getAccessToken, 'function');
   assert.equal(typeof auth.updateProfile, 'function');
   assert.equal(typeof auth.logout, 'function');
   assert.equal(typeof auth.checkSession, 'function');
   assert.equal(typeof auth.getSessionStatus, 'function');
   assert.equal(typeof auth.getReturnTo, 'function');
   assert.equal(typeof auth.ready.then, 'function');
+});
+
+test('getAccessToken can force a fresh JWT for authenticated function calls', async () => {
+  let forceValue = null;
+  const user = {
+    app_metadata: { roles: ['active'], session_id: 'session-1' },
+    user_metadata: {},
+    async jwt(forceRefresh) {
+      forceValue = forceRefresh;
+      return 'fresh-signed-token';
+    }
+  };
+  const auth = loadChemAuth('', user);
+
+  const token = await auth.getAccessToken({ forceRefresh: true });
+
+  assert.equal(token, 'fresh-signed-token');
+  assert.equal(forceValue, true);
 });
 
 test('getReturnTo keeps module parameters but removes Identity control data', () => {

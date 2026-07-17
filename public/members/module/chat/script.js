@@ -389,16 +389,19 @@ const MAX_HISTORY_CHARS = 36_000;
       options: { temperature: API.TEMPERATURE }
     };
 
-    const identity = window.netlifyIdentity;
-    const user = identity && typeof identity.currentUser === 'function' ? identity.currentUser() : null;
-    if (!user || typeof user.jwt !== 'function') {
+    const auth = window.ChemAuth;
+    if (!auth || typeof auth.getAccessToken !== 'function') {
       throw new Error('Sesja wygasła. Zaloguj się ponownie.');
     }
 
     let token = '';
-    try { token = await user.jwt(); }
-    catch { throw new Error('Nie udało się odświeżyć sesji. Zaloguj się ponownie.'); }
-    if (!token) throw new Error('Sesja wygasła. Zaloguj się ponownie.');
+    try {
+      // identity-login rotates session_id. A forced JWT refresh ensures the
+      // function receives that current identifier instead of a cached token.
+      token = await auth.getAccessToken({ forceRefresh: true });
+    } catch {
+      throw new Error('Nie udało się odświeżyć sesji. Zaloguj się ponownie.');
+    }
 
     const ac=new AbortController(); setAborter(ac);
     let res;
@@ -416,15 +419,21 @@ const MAX_HISTORY_CHARS = 36_000;
       setAborter(null);
     }
 
-    if (res.status === 401) throw new Error('Sesja wygasła. Zaloguj się ponownie.');
+    let responseBody = null;
+    try { responseBody = await res.json(); } catch {}
+    const detail = typeof responseBody?.error === 'string' ? responseBody.error : '';
+
+    if (res.status === 401) {
+      const authErrors = {
+        AUTH_REQUIRED: 'Serwer nie otrzymał danych zalogowanego użytkownika. Odśwież stronę i spróbuj ponownie.',
+        AUTH_EXPIRED: 'Sesja wygasła. Zaloguj się ponownie.',
+        SESSION_REPLACED: 'Ta sesja została zastąpiona logowaniem na innym urządzeniu.'
+      };
+      throw new Error(authErrors[detail] || 'Sesja wygasła. Zaloguj się ponownie.');
+    }
     if (res.status === 403) throw new Error('To konto nie ma dostępu do czatu.');
     if (res.status === 429) throw new Error('Przekroczono limit zapytań. Spróbuj ponownie za chwilę.');
     if(!res.ok) {
-      let detail = '';
-      try {
-        const errorBody = await res.json();
-        detail = typeof errorBody?.error === 'string' ? errorBody.error : '';
-      } catch {}
       const friendlyErrors = {
         CONVERSATION_TOO_LONG: 'Historia rozmowy jest zbyt długa. Wyczyść czat i spróbuj ponownie.',
         EMPTY_MODEL_RESPONSE: 'Asystent nie zwrócił odpowiedzi. Spróbuj ponownie.',
@@ -445,8 +454,7 @@ const MAX_HISTORY_CHARS = 36_000;
       };
       throw new Error(friendlyErrors[detail] || `Błąd usługi (${res.status})`);
     }
-    const data=await res.json();
-    return typeof data?.text === 'string' ? data.text : '';
+    return typeof responseBody?.text === 'string' ? responseBody.text : '';
   }
 
   // ---------- Markdown (lekki) ----------

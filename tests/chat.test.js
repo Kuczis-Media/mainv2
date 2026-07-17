@@ -31,6 +31,42 @@ test('chat rejects a request without an authenticated Identity user', async () =
   assert.equal(JSON.parse(response.body).error, 'AUTH_REQUIRED');
 });
 
+test('chat reads the authenticated Identity user from the Netlify handler context', async (t) => {
+  const originalKey = process.env.GEMINI_API_KEY;
+  const originalUrl = process.env.URL;
+  const originalDeployUrl = process.env.DEPLOY_PRIME_URL;
+  const originalFetch = global.fetch;
+
+  t.after(() => {
+    global.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalKey;
+    if (originalUrl === undefined) delete process.env.URL;
+    else process.env.URL = originalUrl;
+    if (originalDeployUrl === undefined) delete process.env.DEPLOY_PRIME_URL;
+    else process.env.DEPLOY_PRIME_URL = originalDeployUrl;
+  });
+
+  process.env.GEMINI_API_KEY = 'test-key';
+  delete process.env.URL;
+  delete process.env.DEPLOY_PRIME_URL;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      candidates: [{ content: { parts: [{ text: 'Działa' }] } }]
+    })
+  });
+
+  const event = eventFor();
+  delete event.clientContext;
+  const response = await chat.handler(event, {
+    clientContext: { user: activeUser }
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(JSON.parse(response.body).text, 'Działa');
+});
+
 test('chat rejects a legacy token without SID after a newer login created a session', async (t) => {
   const originalFetch = global.fetch;
   const originalUrl = process.env.URL;

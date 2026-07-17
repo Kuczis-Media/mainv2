@@ -14,7 +14,7 @@ test('every members module has stable asset paths and waits for initial auth', (
 
   assert.deepEqual(moduleNames, [
     'bitpaper', 'chat', 'classic', 'contact', 'film', 'filmv1', 'forms',
-    'kalkulator', 'pdf', 'slides', 'whiteboard', 'yt'
+    'kalkulator', 'lesson', 'pdf', 'slides', 'whiteboard', 'yt'
   ]);
 
   for (const name of moduleNames) {
@@ -34,7 +34,7 @@ test('every members module has stable asset paths and waits for initial auth', (
 });
 
 test('large member modules keep CSS and JavaScript outside index.html', () => {
-  for (const name of ['bitpaper', 'whiteboard', 'forms', 'yt']) {
+  for (const name of ['bitpaper', 'whiteboard', 'forms', 'lesson', 'yt']) {
     const directory = path.join(modulesRoot, name);
     const html = fs.readFileSync(path.join(directory, 'index.html'), 'utf8');
     assert.doesNotMatch(html, /<style\b/i, `${name}: CSS remains inline`);

@@ -40,7 +40,7 @@ const PROMPT_DIRECTORY = resolve(
 );
 const userRateBuckets = new Map();
 
-export const handler = async (event) => {
+export const handler = async (event, context = {}) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 204,
@@ -57,7 +57,7 @@ export const handler = async (event) => {
     return json({ error: 'METHOD_NOT_ALLOWED' }, 405, { Allow: 'POST' });
   }
 
-  const authorization = await authorizeRequest(event);
+  const authorization = await authorizeRequest(event, context);
   if (!authorization.ok) {
     return json(
       { error: authorization.code },
@@ -162,9 +162,12 @@ export const handler = async (event) => {
   }
 };
 
-async function authorizeRequest(event) {
+async function authorizeRequest(event, context = {}) {
   const token = bearerToken(event.headers || {});
-  const tokenUser = event.clientContext && event.clientContext.user;
+  // Netlify Functions pass Identity claims in the second handler argument.
+  // Keeping the event fallback makes local emulators and older adapters work.
+  const clientContext = context.clientContext || event.clientContext || {};
+  const tokenUser = clientContext.user;
 
   if (!token || !tokenUser) {
     return { ok: false, status: 401, code: 'AUTH_REQUIRED' };

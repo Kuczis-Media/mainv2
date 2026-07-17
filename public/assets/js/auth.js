@@ -136,6 +136,7 @@
       ready: Promise.resolve(unavailable),
       getUser: () => null,
       getProfile: () => null,
+      getAccessToken: async () => { throw new Error('Netlify Identity jest niedostępne.'); },
       updateProfile: async () => { throw new Error('Netlify Identity jest niedostępne.'); },
       logout: async () => false,
       checkSession: async () => ({ ok: false, verified: false, reason: 'identity_unavailable' }),
@@ -346,6 +347,23 @@
   };
 
   const getProfile = () => profileFromUser(getUser());
+
+  const getAccessToken = async ({ forceRefresh = false } = {}) => {
+    const user = getUser();
+    if (!user || typeof user.jwt !== 'function') {
+      const error = new Error('Sesja wygasła. Zaloguj się ponownie.');
+      error.code = 'not_authenticated';
+      throw error;
+    }
+
+    const token = await withTimeout(() => user.jwt(Boolean(forceRefresh)));
+    if (!token) {
+      const error = new Error('Nie udało się odświeżyć sesji.');
+      error.code = 'token_unavailable';
+      throw error;
+    }
+    return token;
+  };
 
   const assertValidProfileName = (value, label) => {
     const normalized = normalizeProfileName(value);
@@ -790,6 +808,7 @@
     ready: authReady,
     getUser,
     getProfile,
+    getAccessToken,
     updateProfile,
     logout,
     checkSession: checkSingleSessionOrLogout,
